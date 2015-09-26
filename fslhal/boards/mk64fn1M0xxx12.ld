@@ -61,8 +61,8 @@
 */
 MEMORY
 {
-        FLASH_B0 (rx) : ORIGIN = 0x00000000, LENGTH = 1024K
-        RAM  (rwx) : ORIGIN = 0x1FFF0000, LENGTH = 256K
+        FLASH_B0 (rx) : ORIGIN = 0x00000000, LENGTH = 0x00100000
+        RAML  (rwx) : ORIGIN = 0x1FFF0000, LENGTH = 256K
 }
 
 /* produce a link error if there is not this amount of RAM for these sections */
@@ -91,7 +91,7 @@ SECTIONS
         *(.startup*)
         /* TODO: does linker detect startup overflow onto flashconfig? */
         . = 0x400;
-        KEEP(*(.flashconfig*))
+        KEEP(*(.flashconfig*)) /* defined in code mk20dx128.c */
         *(.text*)
         *(.rodata*)
         . = ALIGN(4);
@@ -114,20 +114,20 @@ SECTIONS
     _etext = .;
 
     .usbdescriptortable (NOLOAD) : {
-        /* . = ORIGIN(RAM); */
+        /* . = ORIGIN(RAML); */
         . = ALIGN(512);
         *(.usbdescriptortable*)
-    } > RAM
+    } > RAML
 
     .dmabuffers (NOLOAD) : {
         . = ALIGN(4);
         *(.dmabuffers*)
-    } > RAM
+    } > RAML
 
     .usbbuffers (NOLOAD) : {
         . = ALIGN(4);
         *(.usbbuffers*)
-    } > RAM
+    } > RAML
 
     /* used by the startup to initialize data */
     _sidata = LOADADDR(.data);
@@ -139,7 +139,7 @@ SECTIONS
         *(.data*)
         . = ALIGN(4);
         _edata = .;
-    } > RAM
+    } > RAML
 
         /*
      * _staticfs is the place in flash where the static filesystem which
@@ -149,7 +149,7 @@ SECTIONS
 
     .noinit (NOLOAD) : {
         *(.noinit*)
-    } > RAM
+    } > RAML
 
     .bss : {
         . = ALIGN(4);
@@ -159,7 +159,7 @@ SECTIONS
         . = ALIGN(4);
         _ebss = .;
         __bss_end = .;
-    } > RAM
+    } > RAML
 
     /* this is to define the start of the heap, and make sure we have a minimum size */
     .heap :
@@ -167,7 +167,7 @@ SECTIONS
         . = ALIGN(4);
         _heap_start = .;    /* define a global symbol at heap start */
         . = . + _minimum_heap_size;
-    } >RAM
+    } >RAML
 
     /* this just checks there is enough RAM for the stack */
     .stack :
@@ -175,9 +175,9 @@ SECTIONS
         . = ALIGN(4);
         . = . + _minimum_stack_size;
         . = ALIGN(4);
-    } >RAM
+    } >RAML
 
-    _estack = ORIGIN(RAM) + LENGTH(RAM);
-    _ram_end = ORIGIN(RAM) + LENGTH(RAM);
-    _heap_end = ORIGIN(RAM) + 0xe000;
+    _estack = ORIGIN(RAML) + LENGTH(RAML);
+    _ram_end = ORIGIN(RAML) + LENGTH(RAML);
+    _heap_end = ORIGIN(RAML) + 0x10000; /* was 0x0e000 */
 }

@@ -14,10 +14,9 @@
 #include "readline.h"
 #include "lexermemzip.h"
 
-#include "Arduino.h"
+#include "Arduino.h" //TODO
 #include MICROPY_HAL_H
 
-#include "servo.h"
 #include "led.h"
 #include "uart.h"
 #include "pin.h"

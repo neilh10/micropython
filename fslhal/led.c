@@ -1,7 +1,5 @@
 #include <stdio.h>
 
-#include "Arduino.h"
-
 #include "py/nlr.h"
 #include "py/runtime.h"
 #include "led.h"
