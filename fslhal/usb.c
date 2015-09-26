@@ -2,8 +2,6 @@
 
 #include "py/runtime.h"
 
-#include "Arduino.h"
-
 #include "usb.h"
 #include "usb_serial.h"
 

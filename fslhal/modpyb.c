@@ -27,7 +27,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <mk20dx128.h>
-#include "Arduino.h"
+#include "Arduino.h"//TODO
 
 #include "py/obj.h"
 #include "py/gc.h"
@@ -52,7 +52,6 @@
 #include "storage.h"
 #include "sdcard.h"
 #include "accel.h"
-#include "servo.h"
 #include "dac.h"
 #include "usb.h"
 #include "portmodules.h"

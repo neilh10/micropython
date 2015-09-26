@@ -40,8 +40,8 @@ $(info Using toolchain from PATH)
 CROSS_COMPILE = arm-none-eabi-
 endif
 
-CFLAGS_TEENSY = -DF_CPU=96000000 -DUSB_SERIAL -D__MK20DX256__
-CFLAGS_CORTEX_M4 = -mthumb -mtune=cortex-m4 -mcpu=cortex-m4 -msoft-float -mfloat-abi=soft -fsingle-precision-constant -Wdouble-promotion $(CFLAGS_TEENSY)
+#CFLAGS_MPCONFIG = -DF_CPU=96000000 -DUSB_SERIAL -D__MK20DX256__ mpconfigboard.mk
+CFLAGS_CORTEX_M4 = -mthumb -mtune=cortex-m4 -mcpu=cortex-m4 -msoft-float -mfloat-abi=soft -fsingle-precision-constant -Wdouble-promotion $(CFLAGS_MPCONFIG)
 
 INC =  -I.
 INC += -I..
@@ -51,6 +51,7 @@ INC += -I$(BUILD)
 INC += -Icore
 
 CFLAGS = $(INC) -Wall -Wpointer-arith -ansi -std=gnu99 -nostdlib $(CFLAGS_CORTEX_M4)
+CFLAGS += -Iboards/$(BOARD)
 LDFLAGS = -nostdlib -T $(LD_FILE) $(LDFLAGS_MPCONFIG)
 ifeq ($(USE_ARDUINO_TOOLCHAIN),1)
 
@@ -92,18 +93,16 @@ SRC_C = \
 	hal_gpio.c \
 	help.c \
 	import.c \
-	main.c \
 	lcd.c \
 	led.c \
 	lexermemzip.c \
 	memzip.c \
 	modpyb.c \
-	pin_defs_teensy.c \
 	reg.c \
-	teensy_hal.c \
 	timer.c \
 	uart.c \
 	usb.c \
+	$(wildcard boards/$(BOARD)/*.c)
 
 STM_SRC_C = $(addprefix stmhal/,\
 	gccollect.c \
@@ -126,8 +125,6 @@ LIB_SRC_C = $(addprefix lib/,\
 	)
 
 SRC_TEENSY = $(addprefix core/,\
-	mk20dx128.c \
-	pins_teensy.c \
 	analog.c \
 	usb_desc.c \
 	usb_dev.c \
