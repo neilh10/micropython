@@ -89,8 +89,6 @@ CFLAGS += -fdata-sections -ffunction-sections
 #LDFLAGS += -Wl,--gc-sections #passing to linker directly not through cc
 
 SRC_C = \
-	hal_ftm.c \
-	hal_gpio.c \
 	help.c \
 	import.c \
 	lcd.c \
@@ -99,10 +97,11 @@ SRC_C = \
 	memzip.c \
 	modpyb.c \
 	reg.c \
-	timer.c \
 	uart.c \
 	usb.c \
 	$(wildcard boards/$(BOARD)/*.c)
+
+SRC_S = $(SRC_MPCONFIG_S)
 
 STM_SRC_C = $(addprefix stmhal/,\
 	gccollect.c \
@@ -125,15 +124,13 @@ LIB_SRC_C = $(addprefix lib/,\
 	)
 
 SRC_TEENSY = $(addprefix core/,\
-	analog.c \
 	usb_desc.c \
-	usb_dev.c \
 	usb_mem.c \
 	usb_serial.c \
 	yield.c \
 	)
 
-OBJ = $(PY_O) $(addprefix $(BUILD)/, $(SRC_C:.c=.o) $(STM_SRC_C:.c=.o) $(STM_SRC_S:.s=.o) $(SRC_TEENSY:.c=.o))
+OBJ = $(PY_O) $(addprefix $(BUILD)/, $(SRC_C:.c=.o) $(SRC_S:.s=.o) $(STM_SRC_C:.c=.o) $(STM_SRC_S:.s=.o) $(SRC_TEENSY:.c=.o))
 OBJ += $(addprefix $(BUILD)/, $(LIB_SRC_C:.c=.o))
 OBJ += $(BUILD)/pins_gen.o
 
@@ -181,6 +178,7 @@ $(BUILD)/micropython-mz.hex: $(BUILD)/micropython.hex $(shell find ${MEMZIP_DIR}
 $(BUILD)/%.hex: $(BUILD)/%.elf
 	$(ECHO) "HEX $<"
 	$(Q)$(OBJCOPY) -O ihex -R .eeprom "$<" "$@"
+
 
 MAKE_PINS = make-pins.py
 BOARD_PINS = boards/$(BOARD)/teensy_pins.csv

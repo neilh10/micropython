@@ -31,6 +31,7 @@
 #include "core_pins.h"
 #include "pins_arduino.h"
 #include "HardwareSerial.h"
+#include "mpconfigport.h"
 
 #if 0
 // moved to pins_arduino.h
@@ -233,7 +234,7 @@ void rtc_set(unsigned long t)
 	RTC_SR = 0;
 	RTC_TPR = 0;
 	RTC_TSR = t;
-	RTC_SR = RTC_SR_TCE;
+	RTC_SR = RTC_SR_TCE_MASK;
 }
 
 
@@ -446,55 +447,56 @@ void analogWrite(uint8_t pin, int val)
 	//serial_print("cval = ");
 	//serial_phex32(cval);
 	//serial_print("\n");
+	//TODO NH need to check mapping between MK20DX and MK64F
 	switch (pin) {
 	  case 3: // PTA12, FTM1_CH0
 		FTM1_C0V = cval;
-		CORE_PIN3_CONFIG = PORT_PCR_MUX(3) | PORT_PCR_DSE | PORT_PCR_SRE;
+		CORE_PIN3_CONFIG = PORT_PCR_MUX(3) | PORT_PCR_DSE_MASK | PORT_PCR_SRE_MASK;
 		break;
 	  case 4: // PTA13, FTM1_CH1
 		FTM1_C1V = cval;
-		CORE_PIN4_CONFIG = PORT_PCR_MUX(3) | PORT_PCR_DSE | PORT_PCR_SRE;
+		CORE_PIN4_CONFIG = PORT_PCR_MUX(3) | PORT_PCR_DSE_MASK | PORT_PCR_SRE_MASK;
 		break;
 	  case 5: // PTD7, FTM0_CH7
 		FTM0_C7V = cval;
-		CORE_PIN5_CONFIG = PORT_PCR_MUX(4) | PORT_PCR_DSE | PORT_PCR_SRE;
+		CORE_PIN5_CONFIG = PORT_PCR_MUX(4) | PORT_PCR_DSE_MASK | PORT_PCR_SRE_MASK;
 		break;
 	  case 6: // PTD4, FTM0_CH4
 		FTM0_C4V = cval;
-		CORE_PIN6_CONFIG = PORT_PCR_MUX(4) | PORT_PCR_DSE | PORT_PCR_SRE;
+		CORE_PIN6_CONFIG = PORT_PCR_MUX(4) | PORT_PCR_DSE_MASK | PORT_PCR_SRE_MASK;
 		break;
 	  case 9: // PTC3, FTM0_CH2
 		FTM0_C2V = cval;
-		CORE_PIN9_CONFIG = PORT_PCR_MUX(4) | PORT_PCR_DSE | PORT_PCR_SRE;
+		CORE_PIN9_CONFIG = PORT_PCR_MUX(4) | PORT_PCR_DSE_MASK | PORT_PCR_SRE_MASK;
 		break;
 	  case 10: // PTC4, FTM0_CH3
 		FTM0_C3V = cval;
-		CORE_PIN10_CONFIG = PORT_PCR_MUX(4) | PORT_PCR_DSE | PORT_PCR_SRE;
+		CORE_PIN10_CONFIG = PORT_PCR_MUX(4) | PORT_PCR_DSE_MASK | PORT_PCR_SRE_MASK;
 		break;
 	  case 20: // PTD5, FTM0_CH5
 		FTM0_C5V = cval;
-		CORE_PIN20_CONFIG = PORT_PCR_MUX(4) | PORT_PCR_DSE | PORT_PCR_SRE;
+		CORE_PIN20_CONFIG = PORT_PCR_MUX(4) | PORT_PCR_DSE_MASK | PORT_PCR_SRE_MASK;
 		break;
 	  case 21: // PTD6, FTM0_CH6
 		FTM0_C6V = cval;
-		CORE_PIN21_CONFIG = PORT_PCR_MUX(4) | PORT_PCR_DSE | PORT_PCR_SRE;
+		CORE_PIN21_CONFIG = PORT_PCR_MUX(4) | PORT_PCR_DSE_MASK | PORT_PCR_SRE_MASK;
 		break;
 	  case 22: // PTC1, FTM0_CH0
 		FTM0_C0V = cval;
-		CORE_PIN22_CONFIG = PORT_PCR_MUX(4) | PORT_PCR_DSE | PORT_PCR_SRE;
+		CORE_PIN22_CONFIG = PORT_PCR_MUX(4) | PORT_PCR_DSE_MASK | PORT_PCR_SRE_MASK;
 		break;
 	  case 23: // PTC2, FTM0_CH1
 		FTM0_C1V = cval;
-		CORE_PIN23_CONFIG = PORT_PCR_MUX(4) | PORT_PCR_DSE | PORT_PCR_SRE;
+		CORE_PIN23_CONFIG = PORT_PCR_MUX(4) | PORT_PCR_DSE_MASK | PORT_PCR_SRE_MASK;
 		break;
 #if defined(__MK20DX256__)
 	  case 32: // PTB18, FTM2_CH0
 		FTM2_C0V = cval;
-		CORE_PIN32_CONFIG = PORT_PCR_MUX(3) | PORT_PCR_DSE | PORT_PCR_SRE;
+		CORE_PIN32_CONFIG = PORT_PCR_MUX(3) | PORT_PCR_DSE_MASK | PORT_PCR_SRE_MASK;
 		break;
 	  case 25: // PTB19, FTM1_CH1
 		FTM2_C1V = cval;
-		CORE_PIN25_CONFIG = PORT_PCR_MUX(3) | PORT_PCR_DSE | PORT_PCR_SRE;
+		CORE_PIN25_CONFIG = PORT_PCR_MUX(3) | PORT_PCR_DSE_MASK | PORT_PCR_SRE_MASK;
 		break;
 #endif
 	  default:
@@ -570,11 +572,11 @@ void digitalWrite(uint8_t pin, uint8_t val)
 		volatile uint32_t *config = portConfigRegister(pin);
 		if (val) {
 			// TODO use bitband for atomic read-mod-write
-			*config |= (PORT_PCR_PE | PORT_PCR_PS);
+			*config |= (PORT_PCR_PE_MASK | PORT_PCR_PS_MASK);
 			//*config = PORT_PCR_MUX(1) | PORT_PCR_PE | PORT_PCR_PS;
 		} else {
 			// TODO use bitband for atomic read-mod-write
-			*config &= ~(PORT_PCR_PE);
+			*config &= ~(PORT_PCR_PE_MASK);
 			//*config = PORT_PCR_MUX(1);
 		}
 	}
@@ -598,13 +600,13 @@ void pinMode(uint8_t pin, uint8_t mode)
 
 	if (mode == OUTPUT) {
 		*portModeRegister(pin) = 1;
-		*config = PORT_PCR_SRE | PORT_PCR_DSE | PORT_PCR_MUX(1);
+		*config = PORT_PCR_SRE_MASK | PORT_PCR_DSE_MASK | PORT_PCR_MUX(1);
 	} else {
 		*portModeRegister(pin) = 0;
 		if (mode == INPUT) {
 			*config = PORT_PCR_MUX(1);
 		} else {
-			*config = PORT_PCR_MUX(1) | PORT_PCR_PE | PORT_PCR_PS; // pullup
+			*config = PORT_PCR_MUX(1) | PORT_PCR_PE_MASK | PORT_PCR_PS_MASK; // pullup
 		}
 	}
 }

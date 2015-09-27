@@ -10,23 +10,25 @@
 
 #define HAL_NVIC_EnableIRQ(irq)    NVIC_ENABLE_IRQ(irq)
 
-#define GPIOA   ((GPIO_TypeDef *)&GPIOA_PDOR)
-#define GPIOB   ((GPIO_TypeDef *)&GPIOB_PDOR)
-#define GPIOC   ((GPIO_TypeDef *)&GPIOC_PDOR)
-#define GPIOD   ((GPIO_TypeDef *)&GPIOD_PDOR)
-#define GPIOE   ((GPIO_TypeDef *)&GPIOE_PDOR)
-#define GPIOZ   ((GPIO_TypeDef *)NULL)
+  //MK64F12.h
+//#define GPIOA   ((GPIO_TypeDef *)&GPIOA_PDOR)
+//#define GPIOB   ((GPIO_TypeDef *)&GPIOB_PDOR)
+//#define GPIOC   ((GPIO_TypeDef *)&GPIOC_PDOR)
+//#define GPIOD   ((GPIO_TypeDef *)&GPIOD_PDOR)
+//#define GPIOE   ((GPIO_TypeDef *)&GPIOE_PDOR)
+//#define GPIOZ   ((GPIO_TypeDef *)NULL)
 
-#define I2C0    ((I2C_TypeDef *)0x40066000)
-#define I2C1    ((I2C_TypeDef *)0x40067000)
+//#define I2C0    ((I2C_TypeDef *)0x40066000)
+//#define I2C1    ((I2C_TypeDef *)0x40067000)
 
-#undef  SPI0
-#define SPI0    ((SPI_TypeDef *)0x4002C000)
-#define SPI1    ((SPI_TypeDef *)0x4002D000)
 
-#define UART0   ((UART_TypeDef *)&UART0_BDH)
-#define UART1   ((UART_TypeDef *)&UART1_BDH)
-#define UART2   ((UART_TypeDef *)&UART2_BDH)
+//#undef  SPI0  //TODO NH check addr
+//#define SPI0    ((SPI_TypeDef *)0x4002C000)
+//#define SPI1    ((SPI_TypeDef *)0x4002D000)
+
+//#define UART0   ((UART_TypeDef *)&UART0_BDH)
+//#define UART1   ((UART_TypeDef *)&UART1_BDH)
+//#define UART2   ((UART_TypeDef *)&UART2_BDH)
 
 typedef struct {
     uint32_t dummy;
@@ -108,9 +110,10 @@ typedef struct {
 #define GPIO_AF6_I2C1   6
 #define GPIO_AF7_FTM1   7
 
-__attribute__(( always_inline )) static inline void __WFI(void) {
-  __asm volatile ("wfi");
-}
+//MK64F12.h
+//__attribute__(( always_inline )) static inline void __WFI(void) {
+//  __asm volatile ("wfi");
+//}
 
 uint32_t HAL_GetTick(void);
 void     HAL_Delay(uint32_t Delay);

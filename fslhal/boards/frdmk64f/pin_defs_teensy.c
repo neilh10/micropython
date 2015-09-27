@@ -21,7 +21,7 @@ uint32_t pin_get_mode(const pin_obj_t *pin) {
     }
     if (af == 1) {
         if (pin->gpio->PDDR & (1 << pin->pin)) {
-            if (pcr & PORT_PCR_ODE) {
+            if (pcr & PORT_PCR_ODE_MASK) {
                 return GPIO_MODE_OUTPUT_OD;
             }
             return GPIO_MODE_OUTPUT_PP;
@@ -29,7 +29,7 @@ uint32_t pin_get_mode(const pin_obj_t *pin) {
         return GPIO_MODE_INPUT;
     }
 
-    if (pcr & PORT_PCR_ODE) {
+    if (pcr & PORT_PCR_ODE_MASK) {
         return GPIO_MODE_AF_OD;
     }
     return GPIO_MODE_AF_PP;
@@ -50,8 +50,8 @@ uint32_t pin_get_pull(const pin_obj_t *pin) {
 
     // pull is only valid for digital modes (hence the af > 0 test)
 
-    if (af > 0 && (pcr & PORT_PCR_PE) != 0) {
-        if (pcr & PORT_PCR_PS) {
+    if (af > 0 && (pcr & PORT_PCR_PE_MASK) != 0) {
+        if (pcr & PORT_PCR_PS_MASK) {
             return GPIO_PULLUP;
         }
         return GPIO_PULLDOWN;
