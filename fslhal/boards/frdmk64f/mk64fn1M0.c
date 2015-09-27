@@ -1,4 +1,8 @@
-/* Teensyduino Core Library
+/* mk64fn1M0.c -
+ * orginally derived from mk20dx128.c - some nice structures, though mostly commented out as replaced by
+ * startup_MK64F12.s
+ * startup.c
+ *
  * http://www.pjrc.com/teensy/
  * Copyright (c) 2013 PJRC.COM, LLC.
  *
@@ -28,7 +32,7 @@
  * SOFTWARE.
  */
 
-#include "mk20dx128.h"
+#include "mk20dx128.h"  //TODO NH needs to be mk64fn version
 
 
 extern unsigned long _stext;
@@ -38,26 +42,23 @@ extern unsigned long _edata;
 extern unsigned long _sbss;
 extern unsigned long _ebss;
 extern unsigned long _estack;
-//extern void __init_array_start(void);
-//extern void __init_array_end(void);
 
 
+//extern int main (void); - //NH called from startup_MK64F12.s
+//void ResetHandler(void); //NH startup_MK64F12.s:Reset_Handler
+//??void _init_Teensyduino_internal_(void);
+//void __libc_init_array(void);
 
-extern int main (void);
-void ResetHandler(void);
-void _init_Teensyduino_internal_(void);
-void __libc_init_array(void);
 
-
-void fault_isr(void)
+void fault_isr(void) //TODO NH keep
 {
 	while (1) {
 		// keep polling some communication while in fault
 		// mode, so we don't completely die.
-		if (SIM_SCGC4 & SIM_SCGC4_USBOTG) usb_isr();
-		if (SIM_SCGC4 & SIM_SCGC4_UART0) uart0_status_isr();
-		if (SIM_SCGC4 & SIM_SCGC4_UART1) uart1_status_isr();
-		if (SIM_SCGC4 & SIM_SCGC4_UART2) uart2_status_isr();
+		if (SIM_SCGC4 & SIM_SCGC4_USBOTG_MASK) usb_isr();
+		if (SIM_SCGC4 & SIM_SCGC4_UART0_MASK) uart0_status_isr();
+		if (SIM_SCGC4 & SIM_SCGC4_UART1_MASK) uart1_status_isr();
+		if (SIM_SCGC4 & SIM_SCGC4_UART2_MASK) uart2_status_isr();
 	}
 }
 
@@ -166,7 +167,8 @@ void software_isr(void)		__attribute__ ((weak, alias("unused_isr")));
 
 
 // TODO: create AVR-stype ISR() macro, with default linkage to undefined handler
-//
+//NH mk20DX128 definitions - needs updating to mk64fn is used
+#if 0 //NH turned off
 __attribute__ ((section(".vectors"), used))
 void (* const gVectors[])(void) =
 {
@@ -331,32 +333,37 @@ void (* const gVectors[])(void) =
 	software_isr,					// 110 Software interrupt
 #endif
 };
-
+#endif
 //void usb_isr(void)
 //{
 //}
-
+//NH defined startup_MK64F12.s FlashConfig
+#if 0 //NH
 __attribute__ ((section(".flashconfig"), used))
 const uint8_t flashconfigbytes[16] = {
 	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 	0xFF, 0xFF, 0xFF, 0xFF, 0xFE, 0xFF, 0xFF, 0xFF
 };
-
+#endif
 
 // Automatically initialize the RTC.  When the build defines the compile
 // time, and the user has added a crystal, the RTC will automatically
 // begin at the time of the first upload.
 #ifndef TIME_T
-#define TIME_T 1349049600 // default 1 Oct 2012 (never used, Arduino sets this)
+#define TIME_T 1443225600 //default 26 Sept 2015
+//#define TIME_T 1443657600 //default 1 Oct 2015 :)
+//was #define TIME_T 1349049600 // default 1 Oct 2012 (never used, Arduino sets this)
 #endif
 extern void rtc_set(unsigned long t);
 
 
-static void startup_default_early_hook(void) { WDOG_STCTRLH = WDOG_STCTRLH_ALLOWUPDATE; }
+static void startup_default_early_hook(void) { WDOG_STCTRLH = WDOG_STCTRLH_ALLOWUPDATE_MASK; }
 static void startup_default_late_hook(void) {}
 void startup_early_hook(void)		__attribute__ ((weak, alias("startup_default_early_hook")));
 void startup_late_hook(void)		__attribute__ ((weak, alias("startup_default_late_hook")));
 
+//NH defined startup_MK64F12.s Reset_Handler
+#if 0
 __attribute__ ((section(".startup")))
 void ResetHandler(void)
 {
@@ -572,7 +579,7 @@ void ResetHandler(void)
 	main();
 	while (1) ;
 }
-
+#endif //0
 char *__brkval = (char *)&_ebss;
 
 void * _sbrk(int incr)
