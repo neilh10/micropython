@@ -181,7 +181,7 @@ $(BUILD)/%.hex: $(BUILD)/%.elf
 
 
 MAKE_PINS = make-pins.py
-BOARD_PINS = boards/$(BOARD)/teensy_pins.csv
+BOARD_PINS = boards/$(BOARD)/$(BOARD)_pins.csv
 PREFIX_FILE = boards/mk20dx256_prefix.c
 GEN_PINS_SRC = $(BUILD)/pins_gen.c
 GEN_PINS_HDR = $(HEADER_BUILD)/pins.h
