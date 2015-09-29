@@ -1,3 +1,8 @@
+branch  fshal-work
+Being upgraded to add a FRDM-K64F board with a F64FN1M processor
+frdmk64f Status: Runs to after the frdmk64f_pins.csv is generated, then the compile has errors on symbols generated in the two .csv files have problems
+
+Teensy Status: compiles with "make BOARD=teensy"
 # Build Instructions for Teensy 3.1
 
 Currently the Teensy 3.1 port of Micro Python builds under Linux and not under Windows.
