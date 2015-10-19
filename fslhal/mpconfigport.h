@@ -135,7 +135,8 @@ __attribute__(( always_inline )) static inline mp_uint_t disable_irq(void) {
 #define MICROPY_HW_ENABLE_SPI3      (0)
 #define MICROPY_HW_ENABLE_CC3K      (0)
 
-#define MICROPY_HW_LED1             (pin_C5)
+//Teensy LED C5
+#define MICROPY_HW_LED1             (pin_B22)
 #define MICROPY_HW_LED_OTYPE        (GPIO_MODE_OUTPUT_PP)
 #define MICROPY_HW_LED_ON(pin)      (pin->gpio->PSOR = pin->pin_mask)
 #define MICROPY_HW_LED_OFF(pin)     (pin->gpio->PCOR = pin->pin_mask)
