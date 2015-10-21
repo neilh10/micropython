@@ -28,8 +28,10 @@
 #include <string.h>
 #include <errno.h>
 #include <dlfcn.h>
+#include <ctype.h>
 
 #include "py/nlr.h"
+#include "py/runtime0.h"
 #include "py/runtime.h"
 #include "py/binary.h"
 
@@ -37,6 +39,7 @@
 
 #define JJ(call, ...) (*env)->call(env, __VA_ARGS__)
 #define JJ1(call) (*env)->call(env)
+#define MATCH(s, static) (!strncmp(s, static, sizeof(static) - 1))
 
 static JavaVM *jvm;
 static JNIEnv *env;
@@ -46,11 +49,14 @@ static jmethodID Class_getField_mid;
 static jmethodID Class_getMethods_mid;
 static jmethodID Class_getConstructors_mid;
 static jmethodID Method_getName_mid;
-static jmethodID Method_toString_mid;
+static jmethodID Object_toString_mid;
 
 static jclass List_class;
 static jmethodID List_get_mid;
 static jmethodID List_set_mid;
+static jmethodID List_size_mid;
+
+static jclass IndexException_class;
 
 STATIC const mp_obj_type_t jobject_type;
 STATIC const mp_obj_type_t jmethod_type;
@@ -89,13 +95,37 @@ STATIC bool is_object_type(const char *jtypesig) {
     return false;
 }
 
+STATIC void check_exception(void) {
+    jobject exc = JJ1(ExceptionOccurred);
+    if (exc) {
+        //JJ1(ExceptionDescribe);
+        mp_obj_t py_e = new_jobject(exc);
+        JJ1(ExceptionClear);
+        if (JJ(IsInstanceOf, exc, IndexException_class)) {
+            nlr_raise(mp_obj_new_exception_arg1(&mp_type_IndexError, py_e));
+        }
+        nlr_raise(mp_obj_new_exception_arg1(&mp_type_Exception, py_e));
+    }
+}
+
+STATIC void print_jobject(const mp_print_t *print, jobject obj) {
+    jobject str_o = JJ(CallObjectMethod, obj, Object_toString_mid);
+    const char *str = JJ(GetStringUTFChars, str_o, NULL);
+    mp_printf(print, str);
+    JJ(ReleaseStringUTFChars, str_o, str);
+}
+
 // jclass
 
 STATIC void jclass_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind) {
-    (void)kind;
     mp_obj_jclass_t *self = self_in;
-    // Variable value printed as cast to int
-    mp_printf(print, "<jclass @%p>", self->cls);
+    if (kind == PRINT_REPR) {
+        mp_printf(print, "<jclass @%p \"", self->cls);
+    }
+    print_jobject(print, self->cls);
+    if (kind == PRINT_REPR) {
+        mp_printf(print, "\">");
+    }
 }
 
 STATIC void jclass_attr(mp_obj_t self_in, qstr attr_in, mp_obj_t *dest) {
@@ -162,16 +192,36 @@ STATIC mp_obj_t new_jclass(jclass jc) {
 // jobject
 
 STATIC void jobject_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind) {
-    (void)kind;
     mp_obj_jobject_t *self = self_in;
-    // Variable value printed as cast to int
-    mp_printf(print, "<jobject @%p>", self->obj);
+    if (kind == PRINT_REPR) {
+        mp_printf(print, "<jobject @%p \"", self->obj);
+    }
+    print_jobject(print, self->obj);
+    if (kind == PRINT_REPR) {
+        mp_printf(print, "\">");
+    }
 }
 
 STATIC void jobject_attr(mp_obj_t self_in, qstr attr_in, mp_obj_t *dest) {
     if (dest[0] == MP_OBJ_NULL) {
         // load attribute
         mp_obj_jobject_t *self = self_in;
+
+        const char *attr = qstr_str(attr_in);
+        jclass obj_class = JJ(GetObjectClass, self->obj);
+        jstring field_name = JJ(NewStringUTF, attr);
+        jobject field = JJ(CallObjectMethod, obj_class, Class_getField_mid, field_name);
+        JJ(DeleteLocalRef, field_name);
+        JJ(DeleteLocalRef, obj_class);
+        if (!JJ1(ExceptionCheck)) {
+            jfieldID field_id = JJ(FromReflectedField, field);
+            JJ(DeleteLocalRef, field);
+            jobject obj = JJ(GetObjectField, self->obj, field_id);
+            dest[0] = new_jobject(obj);
+            return;
+        }
+        //JJ1(ExceptionDescribe);
+        JJ1(ExceptionClear);
 
         mp_obj_jmethod_t *o = m_new_obj(mp_obj_jmethod_t);
         o->base.type = &jmethod_type;
@@ -197,6 +247,7 @@ STATIC mp_obj_t jobject_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value)
     } else if (value == MP_OBJ_SENTINEL) {
         // load
         jobject el = JJ(CallObjectMethod, self->obj, List_get_mid, idx);
+        check_exception();
         return new_jobject(el);
     } else {
         // store
@@ -207,12 +258,44 @@ STATIC mp_obj_t jobject_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value)
 return MP_OBJ_NULL;
 }
 
+STATIC mp_obj_t jobject_unary_op(mp_uint_t op, mp_obj_t self_in) {
+    mp_obj_jobject_t *self = self_in;
+    switch (op) {
+        case MP_UNARY_OP_BOOL:
+        case MP_UNARY_OP_LEN: {
+            jint len = JJ(CallIntMethod, self->obj, List_size_mid);
+            if (op == MP_UNARY_OP_BOOL) {
+                return mp_obj_new_bool(len != 0);
+            }
+            return MP_OBJ_NEW_SMALL_INT(len);
+        }
+        default:
+            return MP_OBJ_NULL; // op not supported
+    }
+}
+
+// TODO: subscr_load_adaptor & subscr_getiter convenience functions
+// should be moved to common location for reuse.
+STATIC mp_obj_t subscr_load_adaptor(mp_obj_t self_in, mp_obj_t index_in) {
+    return mp_obj_subscr(self_in, index_in, MP_OBJ_SENTINEL);
+}
+MP_DEFINE_CONST_FUN_OBJ_2(subscr_load_adaptor_obj, subscr_load_adaptor);
+
+// .getiter special method which returns iterator which works in terms
+// of object subscription.
+STATIC mp_obj_t subscr_getiter(mp_obj_t self_in) {
+    mp_obj_t dest[2] = {(mp_obj_t)&subscr_load_adaptor_obj, self_in};
+    return mp_obj_new_getitem_iter(dest);
+}
+
 STATIC const mp_obj_type_t jobject_type = {
     { &mp_type_type },
     .name = MP_QSTR_jobject,
     .print = jobject_print,
+    .unary_op = jobject_unary_op,
     .attr = jobject_attr,
     .subscr = jobject_subscr,
+    .getiter = subscr_getiter,
 //    .locals_dict = (mp_obj_t)&jobject_locals_dict,
 };
 
@@ -279,8 +362,23 @@ STATIC bool py2jvalue(const char **jtypesig, mp_obj_t arg, jvalue *out) {
         }
     } else if (type == &jobject_type) {
         printf("TODO: Check java arg type!!\n");
+        while (isalpha(*arg_type) || *arg_type == '.') {
+            arg_type++;
+        }
         mp_obj_jobject_t *jo = arg;
         out->l = jo->obj;
+    } else if (type == &mp_type_bool) {
+        if (IMATCH(arg_type, "boolean")) {
+            out->z = arg == mp_const_true;
+        } else {
+            return false;
+        }
+    } else if (arg == mp_const_none) {
+        //printf("TODO: Check java arg type!!\n");
+        while (isalpha(*arg_type) || *arg_type == '.') {
+            arg_type++;
+        }
+        out->l = NULL;
     } else {
         nlr_raise(mp_obj_new_exception_msg_varg(&mp_type_TypeError, "arg type not supported"));
     }
@@ -289,11 +387,11 @@ STATIC bool py2jvalue(const char **jtypesig, mp_obj_t arg, jvalue *out) {
     return true;
 }
 
+#if 0
 // jvalue is known to be union of jobject and friends. And yet from C's
 // perspective, it's aggregate object which may require passing via stack
 // instead of registers. Work that around by passing jobject and typecasting
 // it.
-#define MATCH(s, static) (!strncmp(s, static, sizeof(static) - 1))
 STATIC mp_obj_t jvalue2py(const char *jtypesig, jobject arg) {
     if (arg == NULL || MATCH(jtypesig, "void")) {
         return mp_const_none;
@@ -310,6 +408,7 @@ STATIC mp_obj_t jvalue2py(const char *jtypesig, jobject arg) {
 
     return MP_OBJ_NULL;
 }
+#endif
 
 STATIC mp_obj_t call_method(jobject obj, const char *name, jarray methods, bool is_constr, mp_uint_t n_args, const mp_obj_t *args) {
     jvalue jargs[n_args];
@@ -317,7 +416,7 @@ STATIC mp_obj_t call_method(jobject obj, const char *name, jarray methods, bool 
     jsize num_methods = JJ(GetArrayLength, methods);
     for (int i = 0; i < num_methods; i++) {
         jobject meth = JJ(GetObjectArrayElement, methods, i);
-        jobject name_o = JJ(CallObjectMethod, meth, Method_toString_mid);
+        jobject name_o = JJ(CallObjectMethod, meth, Object_toString_mid);
         const char *decl = JJ(GetStringUTFChars, name_o, NULL);
         const char *arg_types = strchr(decl, '(') + 1;
         //const char *arg_types_end = strchr(arg_types, ')');
@@ -340,7 +439,7 @@ STATIC mp_obj_t call_method(jobject obj, const char *name, jarray methods, bool 
 //        printf("name=%p meth_name=%s\n", name, meth_name);
 
         bool found = true;
-        for (int i = 0; i < n_args; i++) {
+        for (int i = 0; i < n_args && *arg_types != ')'; i++) {
             if (!py2jvalue(&arg_types, args[i], &jargs[i])) {
                 goto next_method;
             }
@@ -348,6 +447,10 @@ STATIC mp_obj_t call_method(jobject obj, const char *name, jarray methods, bool 
             if (*arg_types == ',') {
                 arg_types++;
             }
+        }
+
+        if (*arg_types != ')') {
+            goto next_method;
         }
 
         if (found) {
@@ -362,15 +465,19 @@ STATIC mp_obj_t call_method(jobject obj, const char *name, jarray methods, bool 
             } else {
                 if (MATCH(ret_type, "void")) {
                     JJ(CallVoidMethodA, obj, method_id, jargs);
+                    check_exception();
                     ret = mp_const_none;
                 } else if (MATCH(ret_type, "int")) {
                     jint res = JJ(CallIntMethodA, obj, method_id, jargs);
+                    check_exception();
                     ret = mp_obj_new_int(res);
                 } else if (MATCH(ret_type, "boolean")) {
                     jboolean res = JJ(CallBooleanMethodA, obj, method_id, jargs);
+                    check_exception();
                     ret = mp_obj_new_bool(res);
                 } else if (is_object_type(ret_type)) {
                     res = JJ(CallObjectMethodA, obj, method_id, jargs);
+                    check_exception();
                     ret = new_jobject(res);
                 } else {
                     JJ(ReleaseStringUTFChars, name_o, decl);
@@ -455,6 +562,10 @@ STATIC void create_jvm() {
     jclass method_class = JJ(FindClass, "java/lang/reflect/Method");
     String_class = JJ(FindClass, "java/lang/String");
 
+    jclass Object_class = JJ(FindClass, "java/lang/Object");
+    Object_toString_mid = JJ(GetMethodID, Object_class, "toString",
+                                     "()Ljava/lang/String;");
+
     Class_getField_mid = (*env)->GetMethodID(env, Class_class, "getField",
                                      "(Ljava/lang/String;)Ljava/lang/reflect/Field;");
     Class_getMethods_mid = (*env)->GetMethodID(env, Class_class, "getMethods",
@@ -463,14 +574,15 @@ STATIC void create_jvm() {
                                      "()[Ljava/lang/reflect/Constructor;");
     Method_getName_mid = (*env)->GetMethodID(env, method_class, "getName",
                                      "()Ljava/lang/String;");
-    Method_toString_mid = (*env)->GetMethodID(env, method_class, "toString",
-                                     "()Ljava/lang/String;");
 
     List_class = JJ(FindClass, "java/util/List");
     List_get_mid = JJ(GetMethodID, List_class, "get",
                                      "(I)Ljava/lang/Object;");
     List_set_mid = JJ(GetMethodID, List_class, "set",
                                      "(ILjava/lang/Object;)Ljava/lang/Object;");
+    List_size_mid = JJ(GetMethodID, List_class, "size",
+                                     "()I");
+    IndexException_class = JJ(FindClass, "java/lang/IndexOutOfBoundsException");
 }
 
 STATIC mp_obj_t mod_jni_cls(mp_obj_t cls_name_in) {

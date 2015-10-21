@@ -55,6 +55,10 @@ Q(WLAN_WAKE)
 Q(PIN_WAKE)
 Q(RTC_WAKE)
 
+// for wipy module
+Q(wipy)
+Q(heartbeat)
+
 // entries for sys.path
 Q(/flash)
 Q(/flash/lib)
@@ -274,16 +278,18 @@ Q(CERT_REQUIRED)
 
 // for network class
 Q(network)
-Q(server_running)
-Q(server_login)
-Q(server_timeout)
+Q(server)
+Q(init)
+Q(deinit)
+Q(login)
+Q(timeout)
+Q(isrunning)
 
 // for WLAN class
 Q(WLAN)
 Q(id)
 Q(init)
 Q(mode)
-Q(key)
 Q(auth)
 Q(ssid)
 Q(bssid)
@@ -293,6 +299,7 @@ Q(scan)
 Q(connect)
 Q(isconnected)
 Q(disconnect)
+Q(sec)
 Q(channel)
 Q(rssi)
 Q(ifconfig)
@@ -313,11 +320,6 @@ Q(ANY_EVENT)
 Q(WDT)
 Q(feed)
 Q(timeout)
-
-// for HeartBeat class
-Q(HeartBeat)
-Q(enable)
-Q(disable)
 
 // for irq class
 Q(irq)
