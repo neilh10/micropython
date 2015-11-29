@@ -80,8 +80,8 @@
 #include "dma.h"
 
 extern void __fatal_error(const char*);
-extern PCD_HandleTypeDef pcd_handle;
-
+extern PCD_HandleTypeDef pcd_fs_handle;
+extern PCD_HandleTypeDef pcd_hs_handle;
 /******************************************************************************/
 /*            Cortex-M4 Processor Exceptions Handlers                         */
 /******************************************************************************/
@@ -299,16 +299,19 @@ void SysTick_Handler(void) {
   * @retval None
   */
 #if defined(USE_USB_FS)
-#define OTG_XX_IRQHandler      OTG_FS_IRQHandler
-#define OTG_XX_WKUP_IRQHandler OTG_FS_WKUP_IRQHandler
-#elif defined(USE_USB_HS)
-#define OTG_XX_IRQHandler      OTG_HS_IRQHandler
-#define OTG_XX_WKUP_IRQHandler OTG_HS_WKUP_IRQHandler
+//#define OTG_XX_IRQHandler      OTG_FS_IRQHandler
+//#define OTG_XX_WKUP_IRQHandler OTG_FS_WKUP_IRQHandler
+//void OTG_XX_IRQHandler(void) {
+void OTG_FS_IRQHandler(void) {
+    HAL_PCD_IRQHandler(&pcd_fs_handle);
+}
 #endif
-
-#if defined(OTG_XX_IRQHandler)
-void OTG_XX_IRQHandler(void) {
-    HAL_PCD_IRQHandler(&pcd_handle);
+#if defined(USE_USB_HS)
+//#define OTG_XX_IRQHandler      OTG_HS_IRQHandler
+//#define OTG_XX_WKUP_IRQHandler OTG_HS_WKUP_IRQHandler
+//void OTG_XX_IRQHandler(void) {
+void OTG_HS_IRQHandler(void) {
+    HAL_PCD_IRQHandler(&pcd_hs_handle);
 }
 #endif
 
@@ -317,10 +320,11 @@ void OTG_XX_IRQHandler(void) {
   * @param  None
   * @retval None
   */
-#if defined(OTG_XX_WKUP_IRQHandler)
-void OTG_XX_WKUP_IRQHandler(void) {
+//#if defined(OTG_XX_WKUP_IRQHandler)
+#if defined(USE_USB_FS)
+void OTG_FS_WKUP_IRQHandler(void) {
 
-  if ((&pcd_handle)->Init.low_power_enable) {
+  if ((&pcd_fs_handle)->Init.low_power_enable) {
     /* Reset SLEEPDEEP bit of Cortex System Control Register */
     SCB->SCR &= (uint32_t)~((uint32_t)(SCB_SCR_SLEEPDEEP_Msk | SCB_SCR_SLEEPONEXIT_Msk));
 
@@ -347,15 +351,56 @@ void OTG_XX_WKUP_IRQHandler(void) {
     {}
 
     /* ungate PHY clock */
-     __HAL_PCD_UNGATE_PHYCLOCK((&pcd_handle));
+     __HAL_PCD_UNGATE_PHYCLOCK((&pcd_fs_handle));
   }
-#ifdef USE_USB_FS
+
   /* Clear EXTI pending Bit*/
   __HAL_USB_FS_EXTI_CLEAR_FLAG();
-#elif defined(USE_USB_HS)
+
+}
+#endif
+
+/**
+  * @brief  This function handles USB OTG FS or HS Wakeup IRQ Handler.
+  * @param  None
+  * @retval None
+  */
+#if defined(USE_USB_HS)
+void OTG_HS_WKUP_IRQHandler(void) {
+
+  if ((&pcd_hs_handle)->Init.low_power_enable) {
+    /* Reset SLEEPDEEP bit of Cortex System Control Register */
+    SCB->SCR &= (uint32_t)~((uint32_t)(SCB_SCR_SLEEPDEEP_Msk | SCB_SCR_SLEEPONEXIT_Msk));
+
+    /* Configures system clock after wake-up from STOP: enable HSE, PLL and select
+    PLL as system clock source (HSE and PLL are disabled in STOP mode) */
+
+    __HAL_RCC_HSE_CONFIG(RCC_HSE_ON);
+
+    /* Wait till HSE is ready */
+    while(__HAL_RCC_GET_FLAG(RCC_FLAG_HSERDY) == RESET)
+    {}
+
+    /* Enable the main PLL. */
+    __HAL_RCC_PLL_ENABLE();
+
+    /* Wait till PLL is ready */
+    while(__HAL_RCC_GET_FLAG(RCC_FLAG_PLLRDY) == RESET)
+    {}
+
+    /* Select PLL as SYSCLK */
+    MODIFY_REG(RCC->CFGR, RCC_CFGR_SW, RCC_SYSCLKSOURCE_PLLCLK);
+
+    while (__HAL_RCC_GET_SYSCLK_SOURCE() != RCC_CFGR_SWS_PLL)
+    {}
+
+    /* ungate PHY clock */
+     __HAL_PCD_UNGATE_PHYCLOCK((&pcd_hs_handle));
+  }
+
     /* Clear EXTI pending Bit*/
   __HAL_USB_HS_EXTI_CLEAR_FLAG();
-#endif
+
 
 }
 #endif

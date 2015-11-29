@@ -25,6 +25,7 @@
  */
 
 #include "usbd_cdc_msc_hid0.h"
+#include "usbh.h"
 
 #define PYB_USB_FLAG_DEV_ENABLED        (0x0001)
 #define PYB_USB_FLAG_USB_MODE_CALLED    (0x0002)

@@ -61,6 +61,7 @@
 #include "dac.h"
 #include "can.h"
 #include "modnetwork.h"
+#include "u_utilities.h"
 
 void SystemClock_Config(void);
 
@@ -522,6 +523,20 @@ soft_reset:
     // reset config variables; they should be set by boot.py
     MP_STATE_PORT(pyb_config_main) = MP_OBJ_NULL;
 
+
+#if defined(USE_USB_HS)
+	  //xdev_out(ttyQueue_putc);
+	  xdev_out(xput_mp);
+    tprintf("usb_host_init");
+
+    //uart_tx_strn(MP_STATE_PORT(pyb_uart_obj_all[4]), str, len);
+   // uart_tx_strn_cooked(MP_STATE_PORT(pyb_uart_obj_all[3]), "**trial**", 9);
+   pyb_usb_host_init(); //done in usb.c:pyb_usb_mode TODO nh
+
+   while (1) {
+	   pyb_usb_host_process();
+   }
+#endif
     // run boot.py, if it exists
     // TODO perhaps have pyb.reboot([bootpy]) function to soft-reboot and execute custom boot.py
     if (reset_mode == 1) {

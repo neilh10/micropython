@@ -33,6 +33,8 @@
 #include "usbd_cdc_msc_hid.h"
 #include "usbd_cdc_interface.h"
 #include "usbd_msc_storage.h"
+#include "usbh_conf.h"
+#include "usbh.h"
 
 #include "py/objstr.h"
 #include "py/runtime.h"
@@ -192,10 +194,14 @@ void usb_vcp_send_strn_cooked(const char *str, int len) {
     vcp = pyb.USB_VCP() # get the VCP device for read/write
     hid = pyb.USB_HID() # get the HID device for write/poll
 
-  Possible extensions:
-    pyb.usb_mode('host', ...)
-    pyb.usb_mode('OTG', ...)
-    pyb.usb_mode(..., port=2) # for second USB port
+  Possible extensions: host otg - no hub (multiple devices plugged in.
+    pyb.usb_mode('OTG') # port may act as above or below, otherwise error on 2nd option
+    pyb.usb_mode('hostCDC')
+    pyb.usb_mode('hostMSC')
+    pyb.usb_mode('hostHIDMouse')
+    pyb.usb_mode('hostHIDKeyboard') # standard
+    pyb.usb_mode('host', ...) # custom eg FTDI
+    pyb.usb_mode('...',... ,port=2) # for second USB port - OTG not supported (PYB1.0 model which has no OTG)
 */
 
 STATIC mp_obj_t pyb_usb_mode(mp_uint_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
@@ -208,9 +214,9 @@ STATIC mp_obj_t pyb_usb_mode(mp_uint_t n_args, const mp_obj_t *pos_args, mp_map_
 
     // fetch the current usb mode -> pyb.usb_mode()
     if (n_args == 0) {
-    #if defined(USE_HOST_MODE)
-        return MP_OBJ_NEW_QSTR(MP_QSTR_host);
-    #elif defined(USE_DEVICE_MODE)
+    //#if defined(USE_HOST_MODE)
+    //    return MP_OBJ_NEW_QSTR(MP_QSTR_host);//TODO how _host & _devce
+	#if	defined(USE_DEVICE_MODE) //#elif defined(USE_DEVICE_MODE)
         uint8_t mode = USBD_GetMode();
         switch (mode) {
             case USBD_MODE_CDC:
@@ -249,19 +255,26 @@ STATIC mp_obj_t pyb_usb_mode(mp_uint_t n_args, const mp_obj_t *pos_args, mp_map_
 
     // get mode string
     const char *mode_str = mp_obj_str_get_str(args[0].u_obj);
+    //bool pyb_usb_otg_mode=0;
+    bool pyb_usb_host_present=0;
 
 #if defined(USE_HOST_MODE)
-
-    // hardware configured for USB host mode
-
-    if (strcmp(mode_str, "host") == 0) {
-        pyb_usb_host_init();
-    } else {
-        goto bad_mode;
+	printf("\n\rpybUSBmode host TEST");
+    // Applies hardware configured for USB host mode - assumes on OTG_FS
+    if (strcmp(mode_str, "hostCdc") == 0) {
+    	USBH_DbgLog("USB hostCdc found");
+        pyb_usb_host_present=1;
+    }  else if (strcmp(mode_str, "hostMsc") == 0 ){
+        pyb_usb_host_present=1;
+    	USBH_DbgLog("USB hostMsc found");
+    }//Fut hostHID
+    if (pyb_usb_host_present) {
+    	pyb_usb_host_init();
     }
 
-#elif defined(USE_DEVICE_MODE)
+#endif
 
+#if defined(USE_DEVICE_MODE)
     // hardware configured for USB device mode
 
     // get the VID, PID and USB mode
@@ -269,7 +282,7 @@ STATIC mp_obj_t pyb_usb_mode(mp_uint_t n_args, const mp_obj_t *pos_args, mp_map_
     // note: we support CDC as a synonym for VCP for backward compatibility
     uint16_t vid = args[1].u_int;
     uint16_t pid = args[2].u_int;
-    usb_device_mode_t mode;
+    usb_device_mode_t mode=0;
     if (strcmp(mode_str, "CDC+MSC") == 0 || strcmp(mode_str, "VCP+MSC") == 0) {
         if (args[2].u_int == -1) {
             pid = USBD_PID_CDC_MSC;
@@ -286,30 +299,34 @@ STATIC mp_obj_t pyb_usb_mode(mp_uint_t n_args, const mp_obj_t *pos_args, mp_map_
         }
         mode = USBD_MODE_CDC;
     } else {
-        goto bad_mode;
+    	if (!pyb_usb_host_present) {
+    		goto bad_mode;
+    	}
     }
 
-    // get hid info if user selected such a mode
-    USBD_HID_ModeInfoTypeDef hid_info;
-    if (mode & USBD_MODE_HID) {
-        mp_obj_t *items;
-        mp_obj_get_array_fixed_n(args[3].u_obj, 5, &items);
-        hid_info.subclass = mp_obj_get_int(items[0]);
-        hid_info.protocol = mp_obj_get_int(items[1]);
-        hid_info.max_packet_len = mp_obj_get_int(items[2]);
-        hid_info.polling_interval = mp_obj_get_int(items[3]);
-        mp_buffer_info_t bufinfo;
-        mp_get_buffer_raise(items[4], &bufinfo, MP_BUFFER_READ);
-        hid_info.report_desc = bufinfo.buf;
-        hid_info.report_desc_len = bufinfo.len;
+    if (0!=mode) {
+		// get hid info if user selected such a mode
+		USBD_HID_ModeInfoTypeDef hid_info;
+		if (mode & USBD_MODE_HID) {
+			mp_obj_t *items;
+			mp_obj_get_array_fixed_n(args[3].u_obj, 5, &items);
+			hid_info.subclass = mp_obj_get_int(items[0]);
+			hid_info.protocol = mp_obj_get_int(items[1]);
+			hid_info.max_packet_len = mp_obj_get_int(items[2]);
+			hid_info.polling_interval = mp_obj_get_int(items[3]);
+			mp_buffer_info_t bufinfo;
+			mp_get_buffer_raise(items[4], &bufinfo, MP_BUFFER_READ);
+			hid_info.report_desc = bufinfo.buf;
+			hid_info.report_desc_len = bufinfo.len;
 
-        // need to keep a copy of this so report_desc does not get GC'd
-        MP_STATE_PORT(pyb_hid_report_desc) = items[4];
-    }
+			// need to keep a copy of this so report_desc does not get GC'd
+			MP_STATE_PORT(pyb_hid_report_desc) = items[4];
+		}
 
-    // init the USB device
-    if (!pyb_usb_dev_init(vid, pid, mode, &hid_info)) {
-        goto bad_mode;
+		// init the USB device
+		if (!pyb_usb_dev_init(vid, pid, mode, &hid_info)) {
+			goto bad_mode;
+		}
     }
 
 #else
@@ -613,7 +630,7 @@ const mp_obj_type_t pyb_usb_hid_type = {
 /******************************************************************************/
 // code for experimental USB OTG support
 
-#ifdef USE_HOST_MODE
+#if 0 //def USE_HOST_MODE
 
 #include "led.h"
 #include "usbh_core.h"

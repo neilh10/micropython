@@ -21,7 +21,7 @@ include ../py/py.mk
 CMSIS_DIR=cmsis
 HAL_DIR=hal/$(MCU_SERIES)
 USBDEV_DIR=usbdev
-#USBHOST_DIR=usbhost
+USBHOST_DIR=usbhost
 FATFS_DIR=lib/fatfs
 DFU=../tools/dfu.py
 # may need to prefix dfu-util with sudo
@@ -39,16 +39,18 @@ INC += -I$(CMSIS_DIR)/inc
 INC += -I$(CMSIS_DIR)/devinc
 INC += -I$(HAL_DIR)/inc
 INC += -I$(USBDEV_DIR)/core/inc -I$(USBDEV_DIR)/class/inc
-#INC += -I$(USBHOST_DIR)
+INC += -I$(USBHOST_DIR)/Core/Inc -I$(USBHOST_DIR)/Class/MSC/Inc -I$(USBHOST_DIR)/Class/CDC/Inc -I$(USBHOST_DIR)/Class/HID/Inc -I$(USBHOST_DIR)/Class/AUDIO/Inc
 INC += -I../lib/mp-readline
 INC += -I../lib/netutils
 INC += -I../lib/timeutils
+INC += -I../py
 
 CFLAGS_CORTEX_M = -mthumb -mabi=aapcs-linux -mfpu=fpv4-sp-d16 -mfloat-abi=hard -fsingle-precision-constant -Wdouble-promotion
 CFLAGS_MCU_f4 = $(CFLAGS_CORTEX_M) -mtune=cortex-m4 -mcpu=cortex-m4 -DMCU_SERIES_F4
 CFLAGS_MCU_f7 = $(CFLAGS_CORTEX_M) -mtune=cortex-m7 -mcpu=cortex-m7 -DMCU_SERIES_F7
 
-CFLAGS = $(INC) -Wall -Wpointer-arith -Werror -ansi -std=gnu99 -nostdlib $(CFLAGS_MOD)
+# -Werror before -ansi
+CFLAGS = $(INC) -Wall -Wpointer-arith -ansi -std=gnu99 -nostdlib $(CFLAGS_MOD)
 CFLAGS += -D$(CMSIS_MCU)
 CFLAGS += $(CFLAGS_MCU_$(MCU_SERIES))
 CFLAGS += $(COPT)
@@ -117,7 +119,11 @@ SRC_C = \
 	usbd_desc.c \
 	usbd_cdc_interface.c \
 	usbd_msc_storage.c \
-	mphalport.c \
+	usbh.c \
+    usbh_conf.c \
+    usbh_cdc_config.c \
+    xprintf.c \
+    mphalport.c \
 	irq.c \
 	pendsv.c \
 	systick.c  \
@@ -180,6 +186,7 @@ SRC_HAL = $(addprefix $(HAL_DIR)/src/stm32$(MCU_SERIES)xx_,\
 	hal_flash.c \
 	hal_flash_ex.c \
 	hal_gpio.c \
+	hal_hcd.c \
 	hal_i2c.c \
 	hal_pcd.c \
 	hal_pcd_ex.c \
@@ -198,6 +205,20 @@ SRC_HAL = $(addprefix $(HAL_DIR)/src/stm32$(MCU_SERIES)xx_,\
 	ll_sdmmc.c \
 	ll_usb.c \
 	)
+
+SRC_USBHOST = $(addprefix $(USBHOST_DIR)/,\
+	Core/Src/usbh_core.c \
+	Core/Src/usbh_ctlreq.c \
+	Core/Src/usbh_ioreq.c \
+	Core/Src/usbh_pipes.c \
+	Class/MSC/Src/usbh_msc.c \
+	Class/CDC/Src/usbh_cdc.c \
+	Class/HID/Src/usbh_hid.c \
+	Class/HID/Src/usbh_hid_keybd.c \
+	Class/HID/Src/usbh_hid_mouse.c \
+	Class/HID/Src/usbh_hid_parser.c \
+	)
+
 
 SRC_USBDEV = $(addprefix $(USBDEV_DIR)/,\
 	core/src/usbd_core.c \
@@ -252,6 +273,7 @@ OBJ += $(addprefix $(BUILD)/, $(SRC_C:.c=.o))
 OBJ += $(addprefix $(BUILD)/, $(SRC_O))
 OBJ += $(addprefix $(BUILD)/, $(SRC_HAL:.c=.o))
 OBJ += $(addprefix $(BUILD)/, $(SRC_USBDEV:.c=.o))
+OBJ += $(addprefix $(BUILD)/, $(SRC_USBHOST:.c=.o))
 OBJ += $(addprefix $(BUILD)/, $(SRC_MOD:.c=.o))
 OBJ += $(BUILD)/pins_$(BOARD).o
 

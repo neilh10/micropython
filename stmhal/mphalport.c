@@ -24,9 +24,9 @@ void mp_hal_set_interrupt_char(int c) {
 
 int mp_hal_stdin_rx_chr(void) {
     for (;;) {
-#if 0
 #ifdef USE_HOST_MODE
         pyb_usb_host_process();
+#if 0
         int c = pyb_usb_host_get_keyboard();
         if (c != 0) {
             return c;

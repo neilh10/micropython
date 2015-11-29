@@ -32,6 +32,7 @@
 #include "rtc.h"
 #include "irq.h"
 #include "mphalport.h"
+#include "u_utilities.h"
 
 /// \moduleref pyb
 /// \class RTC - real time clock
@@ -464,6 +465,10 @@ uint32_t rtc_us_to_subsec(uint32_t us) {
 #define rtc_us_to_subsec
 #define rtc_subsec_to_us
 #endif
+void u_GetTime(  RTC_TimeTypeDef *Time)
+{
+   HAL_RTC_GetTime(&RTCHandle, Time, FORMAT_BIN);
+}
 
 mp_obj_t pyb_rtc_datetime(mp_uint_t n_args, const mp_obj_t *args) {
     rtc_init_finalise();
