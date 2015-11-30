@@ -235,9 +235,15 @@ static inline mp_uint_t disable_irq(void) {
 #define realloc gc_realloc
 
 //see STM32F4xx_HAL_CONF.h USE_USB_FS & USE_USB_HS
-// the following is take to mean USB_FS
+// The options are USB_DEVICE_MODE -for any USB_FS or USB_HS but only 1,
+//   if both FS and HS can be devices result undefined
+// USE_USBFS_HOST_MODE possibly part of USB_FS OTG phy
+// USE_USBHS_HOST_MODE possibly part of USB_HS OTG phy
 #define USE_DEVICE_MODE
-//#define USE_HOST_MODE
+//#define USE_USBFS_HOST_MODE
+//#define USE_USBHS_HOST_MODE
+//#define USE_HOST_MODE older, needs updating
+#define USB_USB_ANY
 
 // board specific definitions
 #include "mpconfigboard.h"
