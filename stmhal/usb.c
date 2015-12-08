@@ -258,7 +258,7 @@ STATIC mp_obj_t pyb_usb_mode(mp_uint_t n_args, const mp_obj_t *pos_args, mp_map_
     //bool pyb_usb_otg_mode=0;
     bool pyb_usb_host_present=0;
 
-#if defined(USE_USBHS_HOST_MODE)
+#if defined(USE_USB_HS)&&defined(USE_HOST_USBHS_MODE)
 	tprintf("pybUSBmode host TEST");
     // Applies hardware configured for USB host mode - assumes on OTG_FS
     if (strcmp(mode_str, "hostCdc") == 0) {

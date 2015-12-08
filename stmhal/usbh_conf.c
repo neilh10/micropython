@@ -481,7 +481,8 @@ USBH_StatusTypeDef USBH_LL_DriverVBUS(USBH_HandleTypeDef *phost, uint8_t state)
 #ifdef USE_USB_FS
     //USB_OTG_FS HOST power supply  PB4-BLU-P2 - When High supplies power from Vin to USB connector
 //TODO  check this works gating on id
-if (phost->id == 0) {
+    tprintf("USBH_LL_DriverVBUS id=%d state=%d",phost->id,state);
+if (phost->id == USB_OTG_FS_CORE_ID) {
   if(state == 0)
   {
     HAL_GPIO_WritePin(GPIOB, GPIO_PIN_2, GPIO_PIN_SET);
@@ -506,7 +507,7 @@ if (phost->id == 0) {
   */
 USBH_StatusTypeDef USBH_LL_SetToggle(USBH_HandleTypeDef *phost, uint8_t pipe, uint8_t toggle)   
 {
-  if(phost->id == 0) 
+  if(phost->id == USB_OTG_FS_CORE_ID)
   {
     if(hhcd_FS.hc[pipe].ep_is_in)
     {
@@ -517,7 +518,7 @@ USBH_StatusTypeDef USBH_LL_SetToggle(USBH_HandleTypeDef *phost, uint8_t pipe, ui
       hhcd_FS.hc[pipe].toggle_out = toggle;
     }
   }
-  else
+  else //USB_OTG_HS_CORE_ID
   {
     if(hhcd_HS.hc[pipe].ep_is_in)
     {

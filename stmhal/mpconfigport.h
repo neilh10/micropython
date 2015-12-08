@@ -240,11 +240,15 @@ static inline mp_uint_t disable_irq(void) {
 // USE_USBFS_HOST_MODE possibly part of USB_FS OTG phy
 // USE_USBHS_HOST_MODE possibly part of USB_HS OTG phy
 #define USE_DEVICE_MODE
+//#define USE_HOST_USBFS_MODE
+#define USE_HOST_USBHS_MODE
+//was
 //#define USE_USBFS_HOST_MODE
 //#define USE_USBHS_HOST_MODE
 //#define USE_HOST_MODE older, needs updating
-#define USB_USB_ANY
-
+#if (defined(USE_USB_HS) && defined(USE_HOST_USBHS_MODE))||(defined(USE_USB_FS) && defined(USE_HOST_USBFS_MODE))
+#define USE_HOST_MODE
+#endif
 // board specific definitions
 #include "mpconfigboard.h"
 

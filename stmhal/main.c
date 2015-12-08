@@ -525,6 +525,7 @@ soft_reset:
 
 
 #if defined(USE_USB_HS)
+#if defined(USE_HOST_USBHS_MODE) || defined(USE_HOST_USBFS_MODE)
 	  //xdev_out(ttyQueue_putc);
 	  xdev_out(xput_mp);
     tprintf("usb_host_init");
@@ -536,6 +537,7 @@ soft_reset:
    while (1) {
 	   pyb_usb_host_process();
    }
+#endif
 #endif
     // run boot.py, if it exists
     // TODO perhaps have pyb.reboot([bootpy]) function to soft-reboot and execute custom boot.py
